@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>三目並べ</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: #f0f0f0;
+    }
+    h1 { margin-bottom: 16px; }
+    #status {
+      font-size: 1.2rem;
+      margin-bottom: 16px;
+      height: 1.5em;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 6px;
+    }››
+    .cell {
+      background: white;
+      border: 2px solid #999;
+      border-radius: 8px;
+      font-size: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .cell:hover:not(.taken) { background: #e8f4ff; }
+    .cell.taken { cursor: default; }
+    .cell.win { background: #fffacd; border-color: #f0a500; }
+    #game-wrap {
+      position: relative;
+    }
+    #celebration {
+      position: absolute;
+      inset: -40px;
+      pointer-events: none;
+      overflow: visible;
+    }
+    .celebration-icon {
+      position: absolute;
+      font-size: 2rem;
+      animation: celebrate 1.2s ease-out forwards;
+      opacity: 0;
+    }
+    @keyframes celebrate {
+      0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.3) rotate(-20deg);
+      }
+      30% {
+        opacity: 1;
+        transform: translateY(-10px) scale(1.2) rotate(10deg);
+      }
+      70% {
+        opacity: 1;
+        transform: translateY(-30px) scale(1) rotate(-5deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-60px) scale(0.8) rotate(15deg);
+      }
+    }
+    #difficulty {
+      margin-bottom: 16px;
+      display: flex;
+      gap: 8px;
+    }
+    .diff-btn {
+      padding: 8px 18px;
+      font-size: 0.95rem;
+      border: 2px solid #aaa;
+      border-radius: 20px;
+      background: white;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .diff-btn:hover { background: #e8f4ff; border-color: #4a90e2; }
+    .diff-btn.active { background: #4a90e2; border-color: #4a90e2; color: white; }
+    #reset {
+      margin-top: 20px;
+      padding: 10px 28px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background: #4a90e2;
+      color: white;
+      cursor: pointer;
+    }
+    #reset:hover { background: #2a70c2; }
+  </style>
+</head>
+<body>
+  <h1>三目並べ</h1>
+  <div id="difficulty">
+    <button class="diff-btn active" data-level="easy">かんたん</button>
+    <button class="diff-btn" data-level="medium">ふつう</button>
+    <button class="diff-btn" data-level="hard">むずかしい</button>
+  </div>
+  <div id="status">⭕ の番</div>
+  <div id="game-wrap">
+    <div id="board"></div>
+    <div id="celebration" aria-hidden="true"></div>
+  </div>
+  <button id="reset">リセット</button>
+
+  <script>
+    const WINS = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    const CELEBRATION_ICONS = ['🎉', '🎊', '🏆', '✨', '🥳', '⭐', '🎈', '👏'];
+
+    let board, gameOver, difficulty, cpuThinking;
+    difficulty = 'easy';
+
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        difficulty = btn.dataset.level;
+        init();
+      });
+    });
+
+    function init() {
+      board = Array(9).fill(null);
+      gameOver = false;
+      cpuThinking = false;
+      document.getElementById('status').textContent = '⭕ の番';
+      clearCelebration();
+      renderBoard();
+    }
+
+    function clearCelebration() {
+      document.getElementById('celebration').innerHTML = '';
+    }
+
+    function showCelebration() {
+      const el = document.getElementById('celebration');
+      el.innerHTML = '';
+      const positions = [
+        [50, 0], [10, 20], [90, 20], [0, 50], [100, 50],
+        [15, 80], [85, 80], [50, 100], [30, 10], [70, 90]
+      ];
+      positions.forEach(([left, top], i) => {
+        const icon = document.createElement('span');
+        icon.className = 'celebration-icon';
+        icon.textContent = CELEBRATION_ICONS[i % CELEBRATION_ICONS.length];
+        icon.style.left = left + '%';
+        icon.style.top = top + '%';
+        icon.style.animationDelay = (i * 0.08) + 's';
+        el.appendChild(icon);
+      });
+    }
+
+    function renderBoard() {
+      const el = document.getElementById('board');
+      el.innerHTML = '';
+      board.forEach((val, i) => {
+        const cell = document.createElement('div');
+        cell.className = 'cell' + (val ? ' taken' : '');
+        cell.textContent = val === 'O' ? '⭕' : val === 'X' ? '❌' : '';
+        cell.addEventListener('click', () => handleClick(i));
+        el.appendChild(cell);
+      });
+    }
+
+    function resolveGame(winner) {
+      gameOver = true;
+      renderBoard();
+      const win = checkWin(board);
+      if (win) {
+        win.forEach(idx => document.querySelectorAll('.cell')[idx].classList.add('win'));
+        document.getElementById('status').textContent =
+          (winner === 'O' ? '⭕' : '❌') + ' の勝ち！ 🎉';
+        if (winner === 'O') showCelebration();
+      } else {
+        document.getElementById('status').textContent = '引き分け！';
+      }
+    }
+
+    function handleClick(i) {
+      if (gameOver || board[i] || cpuThinking) return;
+      board[i] = 'O';
+      if (checkWin(board)) { resolveGame('O'); return; }
+      if (board.every(v => v)) { resolveGame(null); return; }
+      cpuThinking = true;
+      document.getElementById('status').textContent = '❌ が考え中…';
+      renderBoard();
+      setTimeout(() => {
+        const move = cpuMove();
+        board[move] = 'X';
+        cpuThinking = false;
+        if (checkWin(board)) { resolveGame('X'); return; }
+        if (board.every(v => v)) { resolveGame(null); return; }
+        document.getElementById('status').textContent = '⭕ の番';
+        renderBoard();
+      }, 400);
+    }
+
+    function checkWin(b) {
+      for (const [a, c, d] of WINS) {
+        if (b[a] && b[a] === b[c] && b[c] === b[d]) return [a, c, d];
+      }
+      return null;
+    }
+
+    function emptyIndices(b) {
+      return b.map((v, i) => v === null ? i : -1).filter(i => i !== -1);
+    }
+
+    function cpuMove() {
+      if (difficulty === 'easy') return cpuRandom();
+      if (difficulty === 'medium') return cpuMedium();
+      return cpuMinimax();
+    }
+
+    function cpuRandom() {
+      const empties = emptyIndices(board);
+      return empties[Math.floor(Math.random() * empties.length)];
+    }
+
+    function cpuMedium() {
+      // Win if possible
+      const win = findWinning(board, 'X');
+      if (win !== -1) return win;
+      // Block player's win
+      const block = findWinning(board, 'O');
+      if (block !== -1) return block;
+      // Otherwise random
+      return cpuRandom();
+    }
+
+    function findWinning(b, player) {
+      for (const i of emptyIndices(b)) {
+        const copy = [...b];
+        copy[i] = player;
+        if (checkWin(copy)) return i;
+      }
+      return -1;
+    }
+
+    function cpuMinimax() {
+      const result = minimax(board, true);
+      return result.index;
+    }
+
+    function minimax(b, isMaximizing) {
+      const win = checkWin(b);
+      if (win) return { score: isMaximizing ? -10 : 10 };
+      const empties = emptyIndices(b);
+      if (empties.length === 0) return { score: 0 };
+
+      let best = isMaximizing
+        ? { score: -Infinity, index: -1 }
+        : { score: Infinity, index: -1 };
+
+      for (const i of empties) {
+        const copy = [...b];
+        copy[i] = isMaximizing ? 'X' : 'O';
+        const result = minimax(copy, !isMaximizing);
+        if (isMaximizing ? result.score > best.score : result.score < best.score) {
+          best = { score: result.score, index: i };
+        }
+      }
+      return best;
+    }
+
+    document.getElementById('reset').addEventListener('click', init);
+    init();
+  </script>
+</body>
+</html>
