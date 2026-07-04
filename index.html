@@ -2,119 +2,317 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>三目並べ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
     body {
-      font-family: sans-serif;
+      font-family: 'Noto Sans JP', sans-serif;
+      font-weight: 300;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
+      min-height: 100vh;
       margin: 0;
-      background: #f0f0f0;
+      padding: 24px;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(255, 182, 193, 0.45) 0%, transparent 60%),
+        radial-gradient(ellipse 70% 50% at 85% 80%, rgba(216, 180, 220, 0.5) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 60% 30%, rgba(255, 218, 185, 0.35) 0%, transparent 50%),
+        linear-gradient(145deg, #1a0f1e 0%, #2d1b3d 35%, #3d2548 65%, #1f1228 100%);
+      color: #f8eef5;
+      overflow-x: hidden;
     }
-    h1 { margin-bottom: 16px; }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+        radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 70% 15%, rgba(255,215,180,0.7) 0%, transparent 100%),
+        radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 50% 90%, rgba(255,200,220,0.5) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 15% 45%, rgba(255,255,255,0.35) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      font-size: 2.4rem;
+      letter-spacing: 0.12em;
+      margin: 0 0 20px;
+      background: linear-gradient(135deg, #fff5f8 0%, #e8c4d0 40%, #d4a574 80%, #f5e6d3 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: none;
+      filter: drop-shadow(0 2px 8px rgba(212, 165, 116, 0.3));
+    }
+
+    .card {
+      width: 100%;
+      padding: 28px 24px 24px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 220, 230, 0.18);
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    #scoreboard {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .score-item {
+      flex: 1;
+      text-align: center;
+      padding: 12px 8px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 210, 220, 0.15);
+    }
+
+    .score-item .label {
+      font-size: 1.4rem;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .score-item .count {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: #f5d5c8;
+      line-height: 1;
+    }
+
+    .score-item.o .count { color: #ffb8c9; }
+    .score-item.x .count { color: #c9b8ff; }
+
+    .score-divider {
+      display: flex;
+      align-items: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem;
+      color: rgba(255, 220, 230, 0.5);
+      letter-spacing: 0.05em;
+    }
+
+    #difficulty {
+      margin-bottom: 18px;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .diff-btn {
+      padding: 7px 16px;
+      font-size: 0.82rem;
+      font-family: inherit;
+      font-weight: 400;
+      border: 1px solid rgba(255, 200, 210, 0.25);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      color: rgba(255, 230, 240, 0.75);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .diff-btn:hover {
+      background: rgba(255, 200, 210, 0.12);
+      border-color: rgba(255, 180, 200, 0.4);
+      color: #fff;
+    }
+
+    .diff-btn.active {
+      background: linear-gradient(135deg, rgba(212, 140, 160, 0.5), rgba(180, 130, 180, 0.5));
+      border-color: rgba(255, 200, 210, 0.5);
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(200, 120, 150, 0.3);
+    }
+
     #status {
-      font-size: 1.2rem;
-      margin-bottom: 16px;
+      font-size: 1rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 20px;
       height: 1.5em;
+      color: rgba(255, 230, 240, 0.9);
+      text-align: center;
     }
+
+    #game-wrap {
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+
     #board {
       display: grid;
-      grid-template-columns: repeat(3, 100px);
-      grid-template-rows: repeat(3, 100px);
-      gap: 6px;
-    }››
+      grid-template-columns: repeat(3, 96px);
+      grid-template-rows: repeat(3, 96px);
+      background: rgba(255, 245, 250, 0.92);
+      border: 3px solid;
+      border-image: linear-gradient(135deg, #d4a574, #e8b4c8, #c9a0dc) 1;
+      border-radius: 4px;
+      box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.25),
+        inset 0 0 30px rgba(255, 220, 230, 0.15);
+    }
+
     .cell {
-      background: white;
-      border: 2px solid #999;
-      border-radius: 8px;
-      font-size: 3rem;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 2.6rem;
       cursor: pointer;
       transition: background 0.15s;
+      border-right: 2px solid rgba(180, 130, 150, 0.45);
+      border-bottom: 2px solid rgba(180, 130, 150, 0.45);
+      background: transparent;
     }
-    .cell:hover:not(.taken) { background: #e8f4ff; }
+
+    .cell:nth-child(3n) { border-right: none; }
+    .cell:nth-child(n+7) { border-bottom: none; }
+
+    .cell:hover:not(.taken):not(.disabled) {
+      background: rgba(255, 200, 215, 0.25);
+    }
+
     .cell.taken { cursor: default; }
-    .cell.win { background: #fffacd; border-color: #f0a500; }
-    #game-wrap {
-      position: relative;
+    .cell.disabled { cursor: default; }
+    .cell.win {
+      background: rgba(255, 220, 140, 0.35);
+      animation: winPulse 0.6s ease-out;
     }
+
+    @keyframes winPulse {
+      0% { background: rgba(255, 220, 140, 0); }
+      50% { background: rgba(255, 220, 140, 0.5); }
+      100% { background: rgba(255, 220, 140, 0.35); }
+    }
+
     #celebration {
       position: absolute;
       inset: -40px;
       pointer-events: none;
       overflow: visible;
     }
+
     .celebration-icon {
       position: absolute;
       font-size: 2rem;
       animation: celebrate 1.2s ease-out forwards;
       opacity: 0;
     }
+
     @keyframes celebrate {
-      0% {
-        opacity: 0;
-        transform: translateY(20px) scale(0.3) rotate(-20deg);
-      }
-      30% {
-        opacity: 1;
-        transform: translateY(-10px) scale(1.2) rotate(10deg);
-      }
-      70% {
-        opacity: 1;
-        transform: translateY(-30px) scale(1) rotate(-5deg);
-      }
-      100% {
-        opacity: 0;
-        transform: translateY(-60px) scale(0.8) rotate(15deg);
-      }
+      0% { opacity: 0; transform: translateY(20px) scale(0.3) rotate(-20deg); }
+      30% { opacity: 1; transform: translateY(-10px) scale(1.2) rotate(10deg); }
+      70% { opacity: 1; transform: translateY(-30px) scale(1) rotate(-5deg); }
+      100% { opacity: 0; transform: translateY(-60px) scale(0.8) rotate(15deg); }
     }
-    #difficulty {
-      margin-bottom: 16px;
-      display: flex;
-      gap: 8px;
-    }
-    .diff-btn {
-      padding: 8px 18px;
-      font-size: 0.95rem;
-      border: 2px solid #aaa;
-      border-radius: 20px;
-      background: white;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .diff-btn:hover { background: #e8f4ff; border-color: #4a90e2; }
-    .diff-btn.active { background: #4a90e2; border-color: #4a90e2; color: white; }
-    #reset {
+
+    .actions {
       margin-top: 20px;
-      padding: 10px 28px;
-      font-size: 1rem;
-      border: none;
-      border-radius: 8px;
-      background: #4a90e2;
-      color: white;
-      cursor: pointer;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
     }
-    #reset:hover { background: #2a70c2; }
+
+    .btn {
+      padding: 10px 24px;
+      font-size: 0.88rem;
+      font-family: inherit;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      border: none;
+      border-radius: 24px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    #reset {
+      background: linear-gradient(135deg, #c87898, #a868a8);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(180, 100, 140, 0.4);
+    }
+
+    #reset:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(180, 100, 140, 0.55);
+    }
+
+    #reset-scores {
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 220, 230, 0.8);
+      border: 1px solid rgba(255, 200, 210, 0.2);
+    }
+
+    #reset-scores:hover {
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff;
+    }
   </style>
 </head>
 <body>
-  <h1>三目並べ</h1>
-  <div id="difficulty">
-    <button class="diff-btn active" data-level="easy">かんたん</button>
-    <button class="diff-btn" data-level="medium">ふつう</button>
-    <button class="diff-btn" data-level="hard">むずかしい</button>
+  <div class="app">
+    <h1>三目並べ</h1>
+    <div class="card">
+      <div id="scoreboard">
+        <div class="score-item o">
+          <div class="label">⭕</div>
+          <div class="count" id="score-o">0</div>
+        </div>
+        <div class="score-divider">SCORE</div>
+        <div class="score-item x">
+          <div class="label">❌</div>
+          <div class="count" id="score-x">0</div>
+        </div>
+      </div>
+
+      <div id="difficulty">
+        <button class="diff-btn active" data-level="easy">かんたん</button>
+        <button class="diff-btn" data-level="medium">ふつう</button>
+        <button class="diff-btn" data-level="hard">むずかしい</button>
+      </div>
+
+      <div id="status">⭕ の番</div>
+
+      <div id="game-wrap">
+        <div id="board"></div>
+        <div id="celebration" aria-hidden="true"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="reset">もう一局</button>
+        <button class="btn" id="reset-scores">スコアリセット</button>
+      </div>
+    </div>
   </div>
-  <div id="status">⭕ の番</div>
-  <div id="game-wrap">
-    <div id="board"></div>
-    <div id="celebration" aria-hidden="true"></div>
-  </div>
-  <button id="reset">リセット</button>
 
   <script>
     const WINS = [
@@ -124,9 +322,30 @@
     ];
 
     const CELEBRATION_ICONS = ['🎉', '🎊', '🏆', '✨', '🥳', '⭐', '🎈', '👏'];
+    const SCORE_KEY = 'tic-tac-toe-scores';
 
     let board, gameOver, difficulty, cpuThinking;
+    let scores = { O: 0, X: 0 };
     difficulty = 'easy';
+
+    function loadScores() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(SCORE_KEY));
+        if (saved && typeof saved.O === 'number' && typeof saved.X === 'number') {
+          scores = saved;
+        }
+      } catch (_) {}
+      renderScores();
+    }
+
+    function saveScores() {
+      localStorage.setItem(SCORE_KEY, JSON.stringify(scores));
+    }
+
+    function renderScores() {
+      document.getElementById('score-o').textContent = scores.O;
+      document.getElementById('score-x').textContent = scores.X;
+    }
 
     document.querySelectorAll('.diff-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -173,7 +392,10 @@
       el.innerHTML = '';
       board.forEach((val, i) => {
         const cell = document.createElement('div');
-        cell.className = 'cell' + (val ? ' taken' : '');
+        const classes = ['cell'];
+        if (val) classes.push('taken');
+        if (cpuThinking) classes.push('disabled');
+        cell.className = classes.join(' ');
         cell.textContent = val === 'O' ? '⭕' : val === 'X' ? '❌' : '';
         cell.addEventListener('click', () => handleClick(i));
         el.appendChild(cell);
@@ -188,6 +410,9 @@
         win.forEach(idx => document.querySelectorAll('.cell')[idx].classList.add('win'));
         document.getElementById('status').textContent =
           (winner === 'O' ? '⭕' : '❌') + ' の勝ち！ 🎉';
+        scores[winner]++;
+        saveScores();
+        renderScores();
         if (winner === 'O') showCelebration();
       } else {
         document.getElementById('status').textContent = '引き分け！';
@@ -236,13 +461,10 @@
     }
 
     function cpuMedium() {
-      // Win if possible
       const win = findWinning(board, 'X');
       if (win !== -1) return win;
-      // Block player's win
       const block = findWinning(board, 'O');
       if (block !== -1) return block;
-      // Otherwise random
       return cpuRandom();
     }
 
@@ -256,13 +478,11 @@
     }
 
     function cpuMinimax() {
-      const result = minimax(board, true);
-      return result.index;
+      return minimax(board, true).index;
     }
 
     function minimax(b, isMaximizing) {
-      const win = checkWin(b);
-      if (win) return { score: isMaximizing ? -10 : 10 };
+      if (checkWin(b)) return { score: isMaximizing ? -10 : 10 };
       const empties = emptyIndices(b);
       if (empties.length === 0) return { score: 0 };
 
@@ -282,6 +502,13 @@
     }
 
     document.getElementById('reset').addEventListener('click', init);
+    document.getElementById('reset-scores').addEventListener('click', () => {
+      scores = { O: 0, X: 0 };
+      saveScores();
+      renderScores();
+    });
+
+    loadScores();
     init();
   </script>
 </body>
